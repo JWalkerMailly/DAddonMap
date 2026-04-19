@@ -279,6 +279,30 @@ function PANEL:Think()
 	self.SquareMap:Tick()
 end
 
+--- Draw the addon info
+-- Renders the addon's name and size as a banner.
+-- @param addon Table the addon object.
+-- @param w number width of the parent.
+-- @param h number height of the parent.
+local fontHeightCache = nil
+function PANEL:DrawSizeTooltip(addon, w, h)
+
+	local name = addon.title
+	local size = string.format("%.2fMB", bytesToMB(addon.size))
+	local info = name .. ": " .. size
+
+	if (!fontHeightCache) then
+		surface.SetFont("DermaDefaultBold")
+		local _, height = surface.GetTextSize(info)
+		fontHeightCache = height
+	end
+
+	surface.SetDrawColor(color_black)
+	surface.DrawRect(0, 0, w, fontHeightCache + 10)
+
+	draw.SimpleText(name .. ": " .. size, "DermaDefaultBold", 5, 5, color_white)
+end
+
 --- Draw the addon map
 -- Renders the deferred square map texture to the panel.
 -- @param pnl panel The panel being drawn.
@@ -324,6 +348,7 @@ function PANEL:DrawMap(pnl, w, h)
 
 	surface.SetDrawColor(0, 130, 255, 255)
 	surface.DrawOutlinedRect(rx, ry, rw, rh, 5)
+	self:DrawSizeTooltip(rect.obj, w, h)
 end
 
 --- Get addon under cursor

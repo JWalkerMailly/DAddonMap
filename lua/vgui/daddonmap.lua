@@ -1,9 +1,10 @@
 
 local PANEL = {}
 local CACHE_PATH = "daddonmap_steamworks_cache.json"
+local CACHE_BUILT = false
 
 -- preview id caching.
-local steamworksCache = {}
+local STEAMWORKS_CACHE = {}
 
 local function bytesToMB(bytes)
 	return bytes / 1e6
@@ -29,7 +30,7 @@ local function loadSteamworksCache()
 	local dirty = false
 	for wsid, previewid in pairs(decoded) do
 		if (installed[tostring(wsid)]) then
-			steamworksCache[tostring(wsid)] = previewid
+			STEAMWORKS_CACHE[tostring(wsid)] = previewid
 		else
 			dirty = true
 		end
@@ -37,7 +38,7 @@ local function loadSteamworksCache()
 
 	-- persist the pruned cache if anything was removed.
 	if (dirty) then
-		file.Write(CACHE_PATH, util.TableToJSON(steamworksCache))
+		file.Write(CACHE_PATH, util.TableToJSON(STEAMWORKS_CACHE))
 	end
 end
 
@@ -47,7 +48,7 @@ end
 -- ensure workshop preview data is available.
 function PANEL:Setup()
 
-	local squaremap   = include("includes/modules/squaremap.lua")
+	local squaremap   = include("daddonmap/squaremap.lua")
 	self.SquareMap    = squaremap.new(1024, 1024)
 	self.SquareMapRT  = GetRenderTarget("daddonmap", 1024, 1024)
 	self.SquareMapMat = CreateMaterial("daddonmap", "UnlitGeneric", {
@@ -117,7 +118,14 @@ function PANEL:Init()
 		-- dispatcher.
 		if (key == MOUSE_LEFT) then self:ClickAddon(this) end
 		if (key == MOUSE_RIGHT) then self:RightClickAddon(this) end
+
+		timer.Create("daddonmap_init_" .. tostring(self), 0.4, 1, function()
+			if (IsValid(this)) then this.TriggerCount = 0 end
+		end)
 	end
+
+	-- safe to auto-load if cache was built once.
+	if (CACHE_BUILT) then self:LoadAddons() end
 end
 
 --- Save steamworks cache to disk
@@ -125,7 +133,7 @@ end
 -- data folder as JSON. Uses a short timer to batch or defer frequent updates.
 function PANEL:SaveSteamworksCache()
 	timer.Create("daddonmap_steamworks_cache_" .. tostring(self), 2, 1, function()
-		file.Write(CACHE_PATH, util.TableToJSON(steamworksCache))
+		file.Write(CACHE_PATH, util.TableToJSON(STEAMWORKS_CACHE))
 	end)
 end
 
@@ -153,7 +161,7 @@ function PANEL:CommitBatchToMap(data, start, len)
 		if (!data[i]) then continue end
 
 		local wsid = data[i].obj.wsid
-		local previewid = steamworksCache[wsid]
+		local previewid = STEAMWORKS_CACHE[wsid]
 
 		if (previewid) then
 
@@ -174,7 +182,7 @@ function PANEL:CommitBatchToMap(data, start, len)
 				if (!previewIcon) then return end
 
 				-- try commit.
-				steamworksCache[wsid] = info.previewid
+				STEAMWORKS_CACHE[wsid] = info.previewid
 				self:SaveSteamworksCache()
 
 				-- bail callback if generation changed.
@@ -255,6 +263,8 @@ function PANEL:LoadAddons(sizeFilter)
 
 		count = count + len
 		self.Progress = count / total
+	end, function()
+		CACHE_BUILT = true
 	end)
 
 	-- filter is safe to be changed again.
@@ -349,7 +359,7 @@ end
 
 --- Handle addon right click
 -- Retrieves the addon currently under the cursor and triggers the
--- OnClickAddon callback if a valid addon is found.
+-- OnRightClickAddon callback if a valid addon is found.
 -- @param pnl panel The panel receiving the click event.
 function PANEL:RightClickAddon(pnl)
 	local addon = self:GetAddonAtCursor(pnl)

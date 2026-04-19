@@ -1,4 +1,2 @@
 
---- TODO: resource.AddWorkshop("###")
-
-AddCSLuaFile("includes/modules/squaremap.lua")
+AddCSLuaFile("daddonmap/squaremap.lua")

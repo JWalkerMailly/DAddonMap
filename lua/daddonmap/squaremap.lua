@@ -1,6 +1,4 @@
 
-AddCSLuaFile()
-
 --- squaremap.lua
 -- A squarified treemap layout generator with asynchronous execution support.
 -- This module converts weighted datasets into space-filling rectangular layouts,
@@ -415,9 +413,10 @@ end
 -- Cancels any in-progress generation before starting a new one. The layout
 -- is built incrementally using a coroutine.
 -- @param data table Array of input items.
--- @param budgetMs number Optional time budget in milliseconds per tick.
 -- @param progressCallback function Optional callback invoked during generation progress.
-function squaremap:GenerateAsync(data, progressCallback, budgetMs)
+-- @param finishedCallback function Optional callback invoked when generation terminates.
+-- @param budgetMs number Optional time budget in milliseconds per tick.
+function squaremap:GenerateAsync(data, progressCallback, finishedCallback, budgetMs)
 
 	if (self.CancellationToken) then
 		self.CancellationToken.Cancelled = true
@@ -454,6 +453,8 @@ function squaremap:GenerateAsync(data, progressCallback, budgetMs)
 		if (generation == self.Generation) then
 			buildIndex(self)
 		end
+
+		if (finishedCallback) then finishedCallback() end
 	end)
 
 	self._coroutine = co

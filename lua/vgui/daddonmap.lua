@@ -1,6 +1,4 @@
 
-local squaremap = include("includes/modules/squaremap.lua")
-
 local PANEL = {}
 local CACHE_PATH = "daddonmap_steamworks_cache.json"
 
@@ -11,6 +9,10 @@ local function bytesToMB(bytes)
 	return bytes / 1e6
 end
 
+--- Load steamworks cache
+-- Reads the cached workshop preview IDs from the data folder and rebuilds
+-- the in-memory cache table. Filters out entries for addons that are no
+-- longer installed, and rewrites the cache file if any stale entries are removed.
 local function loadSteamworksCache()
 
 	if (!file.Exists(CACHE_PATH, "DATA")) then return end
@@ -39,8 +41,13 @@ local function loadSteamworksCache()
 	end
 end
 
+--- Setup
+-- Creates the square map renderer and render target.
+-- Used for displaying addon content. Also loads the Steamworks cache to
+-- ensure workshop preview data is available.
 function PANEL:Setup()
 
+	local squaremap   = include("includes/modules/squaremap.lua")
 	self.SquareMap    = squaremap.new(1024, 1024)
 	self.SquareMapRT  = GetRenderTarget("daddonmap", 1024, 1024)
 	self.SquareMapMat = CreateMaterial("daddonmap", "UnlitGeneric", {
@@ -51,6 +58,8 @@ function PANEL:Setup()
 	loadSteamworksCache()
 end
 
+--- Component initialization
+-- Initializes the DAddonMap panel.
 function PANEL:Init()
 
 	self:Setup()
@@ -65,13 +74,13 @@ function PANEL:Init()
 
 	local title = vgui.Create("DLabel", controls)
 	title:Dock(TOP)
-	title:SetText("Addon Size Map")
+	title:SetText("#daddonmap.title.text")
 	title:SetDark(true)
 
 	self.SizeFilter = vgui.Create("DNumSlider", controls)
 	self.SizeFilter.Ready = false
 	self.SizeFilter:SetEnabled(false)
-	self.SizeFilter:SetText("Size Filter (MB)")
+	self.SizeFilter:SetText("#daddonmap.sizefilter.text")
 	self.SizeFilter:SetMinMax(0.01, 10000)
 	self.SizeFilter:SetValue(10000) -- 10GB
 	self.SizeFilter:SetDark(true)
@@ -111,12 +120,24 @@ function PANEL:Init()
 	end
 end
 
+--- Save steamworks cache to disk
+-- Schedules a delayed write of the Steamworks cache table to the
+-- data folder as JSON. Uses a short timer to batch or defer frequent updates.
 function PANEL:SaveSteamworksCache()
 	timer.Create("daddonmap_steamworks_cache_" .. tostring(self), 2, 1, function()
 		file.Write(CACHE_PATH, util.TableToJSON(steamworksCache))
 	end)
 end
 
+--- Commit batch to map
+-- Iterates over a subset of addon data and draws their workshop preview
+-- icons onto the square map. Uses cached preview IDs when available,
+-- otherwise queries Steamworks asynchronously and updates the cache.
+-- Ensures rendering is aborted if the panel becomes invalid, the map
+-- generation changes, or the operation is cancelled.
+-- @param data table The full dataset of addon entries to render.
+-- @param start number The starting index of the batch.
+-- @param len number The number of entries to process in this batch.
 function PANEL:CommitBatchToMap(data, start, len)
 
 	-- failsafe.
@@ -176,6 +197,11 @@ function PANEL:CommitBatchToMap(data, start, len)
 	end
 end
 
+--- Load and render addons
+-- Collects installed addons and asynchronously generates their layout 
+-- on the square map. Updates the render target in batches and tracks 
+-- progress as rendering completes.
+-- @param sizeFilter number|nil Maximum addon size in MB to include.
 function PANEL:LoadAddons(sizeFilter)
 
 	-- avoid redundant regeneration if the value hasn't changed.
@@ -231,21 +257,31 @@ function PANEL:LoadAddons(sizeFilter)
 		self.Progress = count / total
 	end)
 
-	-- filter is safe be be changed again.
+	-- filter is safe to be changed again.
 	self.SizeFilter.Ready = true
 end
 
+--- Map think handler
+-- Updates the square map each frame by advancing any pending asynchronous
+-- generation or processing tasks.
 function PANEL:Think()
 	if (!self.SquareMap) then return end
 	self.SquareMap:Tick()
 end
 
+--- Draw the addon map
+-- Renders the deferred square map texture to the panel.
+-- @param pnl panel The panel being drawn.
+-- @param w number The width of the panel.
+-- @param h number The height of the panel.
 local color_red = Color(250, 80, 75)
 function PANEL:DrawMap(pnl, w, h)
 
 	if (!self.Progress) then
-		draw.SimpleText("Click twice to generate addon size map", "ContentHeader", w / 2, h / 2, color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-		draw.SimpleText("This is an intensive process, load will depend on number of addons.", "DermaDefaultBold", w / 2, h / 2 + 30, color_red, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		local text = language.GetPhrase("#daddonmap.generate.text")
+		local warning = language.GetPhrase("#daddonmap.generate.warning")
+		draw.SimpleText(text, "ContentHeader", w / 2, h / 2, color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+		draw.SimpleText(warning, "DermaDefaultBold", w / 2, h / 2 + 30, color_red, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		return
 	end
 
@@ -280,6 +316,11 @@ function PANEL:DrawMap(pnl, w, h)
 	surface.DrawOutlinedRect(rx, ry, rw, rh, 5)
 end
 
+--- Get addon under cursor
+-- Determines which addon entry is currently under the user's cursor based
+-- on the square map layout and panel bounds.
+-- @param pnl panel The panel used for coordinate translation.
+-- @return table|nil The addon object at the cursor.
 function PANEL:GetAddonAtCursor(pnl)
 
 	local mx, my = input.GetCursorPos()
@@ -293,6 +334,10 @@ function PANEL:GetAddonAtCursor(pnl)
 	return rect.obj
 end
 
+--- Handle addon click
+-- Retrieves the addon currently under the cursor and triggers the
+-- OnClickAddon callback if a valid addon is found.
+-- @param pnl panel The panel receiving the click event.
 function PANEL:ClickAddon(pnl)
 	local addon = self:GetAddonAtCursor(pnl)
 	if (addon) then self:OnClickAddon(addon) end
@@ -302,6 +347,10 @@ function PANEL:OnClickAddon(addon)
 	-- override
 end
 
+--- Handle addon right click
+-- Retrieves the addon currently under the cursor and triggers the
+-- OnClickAddon callback if a valid addon is found.
+-- @param pnl panel The panel receiving the click event.
 function PANEL:RightClickAddon(pnl)
 	local addon = self:GetAddonAtCursor(pnl)
 	if (addon) then self:OnRightClickAddon(addon) end

@@ -452,9 +452,8 @@ function squaremap:GenerateAsync(data, progressCallback, finishedCallback, budge
 
 		if (generation == self.Generation) then
 			buildIndex(self)
+			if (finishedCallback) then finishedCallback() end
 		end
-
-		if (finishedCallback) then finishedCallback() end
 	end)
 
 	self._coroutine = co

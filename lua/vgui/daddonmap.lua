@@ -288,8 +288,8 @@ local color_red = Color(250, 80, 75)
 function PANEL:DrawMap(pnl, w, h)
 
 	if (!self.Progress) then
-		local text = language.GetPhrase("#daddonmap.generate.text")
-		local warning = language.GetPhrase("#daddonmap.generate.warning")
+		local text = language.GetPhrase("daddonmap.generate.text")
+		local warning = language.GetPhrase("daddonmap.generate.warning")
 		draw.SimpleText(text, "ContentHeader", w / 2, h / 2, color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		draw.SimpleText(warning, "DermaDefaultBold", w / 2, h / 2 + 30, color_red, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 		return

@@ -1,4 +1,4 @@
-h# DAddonMap
+# DAddonMap
 
 A VGUI component for Garry's Mod that renders a square map of the overall size of currently installed addons. Based on flat tree-mapping algorithms to display rectangles of uniform aspect ratios.
 

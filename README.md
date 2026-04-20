@@ -18,7 +18,7 @@ A VGUI component for Garry's Mod that renders a square map of the overall size o
 * Fast async tree-map algorithm for space partitioning
 * Lookup index with variable kernel for near O(1) filter lookups
 * Steamworks caching and filesystem lookups for preview ids
-* Deferred rendering with batching using render targets to reduce draw calls
+* Deferred rendering with batching using rendertargets to reduce draw calls
 * Async map rendering based on progress
 
 <br>
@@ -28,6 +28,18 @@ A VGUI component for Garry's Mod that renders a square map of the overall size o
 ```lua
 local map = vgui.Create("DAddonMap")
 ```
+
+<br>
+
+## ⚙️ How it works
+
+* Addons are collected via *engine.GetAddons()* and inserted into the square map as weighted data based on `size`.
+* Async process starts (coroutine) sorting addons by size using mergesort.
+* Areas are computed so rects fill a predetermined 1024x1024 space.
+* Squarify (treemap) algorithm lays out rectangles row by row asynchronously, optimizing for aspect ratio.
+* Each batch gets committed to the rendertarget while caching preview IDs to disk.
+* Upon completion, a spatial index using a variable kernel is built over the map for hit testing.
+* Completed map gets drawn in a single draw call per frame using rendertarget.
 
 <br>
 
@@ -57,7 +69,7 @@ DAddonMap is built around:
 
 - Deferred async rendering
 - Batch processing of Steamworks preview IDs
-- One-time map generation through render targets
+- One-time map generation through rendertargets
 - Flat tree-map algorithm with fast async merge-sort
 
 ## 📖 References

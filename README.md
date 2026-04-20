@@ -1,4 +1,4 @@
-# DAddonMap
+h# DAddonMap
 
 A VGUI component for Garry's Mod that renders a square map of the overall size of currently installed addons. Based on flat tree-mapping algorithms to display rectangles of uniform aspect ratios.
 
@@ -55,7 +55,7 @@ Callback upon right clicking an addon.
 
 DAddonMap is built around:
 
-- Deferred async rendendering
+- Deferred async rendering
 - Batch processing of Steamworks preview IDs
 - One-time map generation through render targets
 - Flat tree-map algorithm with fast async merge-sort

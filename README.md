@@ -20,6 +20,7 @@ A VGUI component for Garry's Mod that renders a square map of the overall size o
 * Steamworks caching and filesystem lookups for preview ids
 * Deferred rendering with batching using rendertargets to reduce draw calls
 * Async map rendering based on progress
+* Adaptive display size with 0 extra computation cost
 
 <br>
 
